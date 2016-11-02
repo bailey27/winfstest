@@ -29,7 +29,7 @@
 # (INCLUDING NEGLIGENCE  OR OTHERWISE) ARISING IN  ANY WAY OUT OF  THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import inspect, os, random, subprocess, sys, threading, types
+import inspect, os, random, re, subprocess, sys, threading, types
 
 __all__ = [
     "testline", "testeval", "testdone", "uniqname",
@@ -54,12 +54,10 @@ def testdone():
     _ntests = 0
 
 def uniqname():
-    path = ""
-    if len(sys.argv)>0:
-        path = os.path.normpath(sys.argv[1]) + "\\"
-    return path + "%08x" % random.randint(1, 2 ** 32)
+    return "%08x" % random.randint(1, 2 ** 32)
 
 _fstest_exe = os.path.splitext(os.path.realpath(__file__))[0] + ".exe"
+_field_re = re.compile(r'(?:[^\s"]|"[^"]*")+')
 class _fstest_task(object):
     def __init__(self, tsk, cmd, exp):
         self.tsk = tsk
@@ -76,6 +74,10 @@ class _fstest_task(object):
         self.thr = threading.Thread(target=self._readthread)
         self.thr.start()
     def __enter__(self):
+        self.thr.join()
+        self.err, self.res = self._fstest_res()
+        if self.exp is not None:
+            self._expect(self.cmd, self.exp, self.err, self.res)
         return self
     def __exit__(self, type, value, traceback):
         if self.tsk:
@@ -84,14 +86,10 @@ class _fstest_task(object):
             except IOError:
                 pass
         self.prc.stdin.close()
-        self.thr.join()
         self.prc.wait()
         ret = self.prc.poll()
         if ret:
             raise subprocess.CalledProcessError(ret, self.cmd)
-        self.err, self.res = self._fstest_res()
-        if self.exp is not None:
-            self._expect(self.cmd, self.exp, self.err, self.res)
     def _readthread(self):
         self.out = self.prc.stdout.read()
         self.out = self.out.replace("\r\n", "\n").replace("\r", "\n")
@@ -103,7 +101,7 @@ class _fstest_task(object):
                 continue
             d = {}
             res.append(d)
-            for p in l.split():
+            for p in _field_re.findall(l):
                 k, v = p.split("=", 2)
                 if v.startswith('"') and v.endswith('"') and len(v) >= 2:
                     v = v[1:-1]
@@ -118,11 +116,13 @@ class _fstest_task(object):
         s = "expect" if not self.tsk else "expect_task"
         if isinstance(exp, types.FunctionType): # function, lambda
             if "0" == err:
-                testline(exp(res), "%s \"%s\" %s" % (s, cmd, exp.__name__))
+                testline(exp(res), "%s \"%s\" %s - result %s" % (s, cmd, exp.__name__, res))
             else:
                 testline(0, "%s \"%s\" %s - got %s" % (s, cmd, 0, err))
         else:
-            if str(exp) == err:
+            if err is None:
+                testline(1, "%s \"%s\" %s" % (s, cmd, exp))
+            elif str(exp) == err:
                 testline(1, "%s \"%s\" %s" % (s, cmd, exp))
             else:
                 testline(0, "%s \"%s\" %s - got %s" % (s, cmd, exp, err))
