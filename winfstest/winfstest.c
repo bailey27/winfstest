@@ -32,9 +32,14 @@
  */
 
 #include <windows.h>
+#include <winerror.h>
 #include <sddl.h>
 #include <inttypes.h>
 #include <stdio.h>
+
+#if _MSC_VER < 1900
+#define snprintf _snprintf
+#endif
 
 static int do_CreateFile(int argc, wchar_t **argv);
 static int do_DeleteFile(int argc, wchar_t **argv);
