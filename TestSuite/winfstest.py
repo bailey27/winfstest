@@ -54,7 +54,7 @@ def testdone():
     _ntests = 0
 
 def uniqname():
-    return "%08x" % random.randint(1, 2 ** 32)
+    return "%s%08x" % (sys.argv[1], random.randint(1, 2 ** 32))
 
 _fstest_exe = os.path.splitext(os.path.realpath(__file__))[0] + ".exe"
 _field_re = re.compile(r'(?:[^\s"]|"[^"]*")+')
