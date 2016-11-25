@@ -93,7 +93,7 @@ if "__main__" == __name__:
         totals = [0, 0]
         testenv_tmppath = ""
         if len(sys.argv)>2:
-			testenv_tmppath = sys.argv[2]
+            testenv_tmppath = sys.argv[2]
         for arg in [sys.argv[1]]:
             for dirpath, dirnames, filenames in walktree(arg):
                 for filename in filenames:
