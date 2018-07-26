@@ -26,4 +26,7 @@ expect("RemoveDirectory %s" % name, "ERROR_DIR_NOT_EMPTY")
 expect("DeleteFile %s\\inner_file" % name, 0)
 expect("RemoveDirectory %s" % name, 0)
 
+# test creating a directory with a non-existing parent
+expect("CreateDirectory %s\\bar 0" % name, "ERROR_PATH_NOT_FOUND")
+
 testdone()
